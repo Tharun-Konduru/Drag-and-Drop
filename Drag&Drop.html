@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Your existing styles */
+
+        .main-container {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: space-between;
+            padding: 50px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 20px;
+            width: 30%;
+            background-color: #fff;
+        }
+
+        .heading {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .task-container {
+            min-height: 50px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            overflow: auto;
+        }
+
+        .task {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: move;
+        }
+
+        .add-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: green;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .add-button:hover {
+            background-color: #0056b3;
+            transform: scale(1.2);
+        }
+
+        .task-count {
+            font-weight: bold;
+            color: green;
+        }
+
+        .modal-container {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0, 0, 0);
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #d9534f;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .reset-button:hover {
+            background-color: #c9302c;
+            transform: scale(1.2);
+        }
+
+        .delete-button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #d9534f;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background-color: #c9302c;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="container" id="not-started-container">
+            <h2 class="heading">Not Started (<span class="task-count">0</span>)</h2>
+            <div class="task-container" ondrop="dropTask(event)" ondragover="allowDropTask(event)">
+                <!-- Task cards go here -->
+            </div>
+            <button class="add-button" onclick="addNewTaskToContainer('not-started-container')">+ New</button>
+            <button class="delete-button" onclick="deleteAllTasks('not-started-container')">Delete All Tasks</button>
+        </div>
+
+        <div class="container" id="in-progress-container">
+            <h2 class="heading">In Progress (<span class="task-count">0</span>)</h2>
+            <div class="task-container" ondrop="dropTask(event)" ondragover="allowDropTask(event)">
+                <!-- Task cards go here -->
+            </div>
+            <button class="add-button" onclick="addNewTaskToContainer('in-progress-container')">+ New</button>
+            <button class="delete-button" onclick="deleteAllTasks('in-progress-container')">Delete All Tasks</button>
+        </div>
+
+        <div class="container" id="completed-container">
+            <h2 class="heading">Completed (<span class="task-count">0</span>)</h2>
+            <div class="task-container" ondrop="dropTask(event)" ondragover="allowDropTask(event)">
+                <!-- Task cards go here -->
+            </div>
+            <button class="add-button" onclick="addNewTaskToContainer('completed-container')">+ New</button>
+            <button class="delete-button" onclick="deleteAllTasks('completed-container')">Delete All Tasks</button>
+        </div>
+
+        <div class="modal-container" id="myModal">
+            <div class="modal-content">
+                <span class="close-button" onclick="closeTaskDetailsModal()">&times;</span>
+                <h2>Edit Task</h2>
+                <input type="text" id="editedTaskTitle" placeholder="Enter new task title">
+                <button onclick="saveEditedTaskTitle()">Save Changes</button>
+            </div>
+        </div>
+
+        <button class="reset-button" onclick="resetTaskBoard()">Reset All Tasks</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            initializeTaskBoard();
+            show(); // Load saved data on page load
+        });
+
+        function initializeTaskBoard() {
+            const containers = document.querySelectorAll(".container");
+
+            containers.forEach((container) => {
+                const taskContainer = container.querySelector(".task-container");
+                const addButton = container.querySelector(".add-button");
+                const deleteButton = container.querySelector(".delete-button");
+
+                addButton.addEventListener("click", () => {
+                    const taskTitle = prompt("Enter task title:");
+                    if (taskTitle) {
+                        addNewTaskToContainer(container.id, taskTitle);
+                    }
+                });
+
+                deleteButton.addEventListener("click", () => {
+                    deleteAllTasks(container.id);
+                });
+
+                taskContainer.addEventListener("dragstart", (e) => {
+                    e.dataTransfer.setData("text/plain", e.target.id);
+                });
+
+                taskContainer.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                });
+
+                taskContainer.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    const taskId = e.dataTransfer.getData("text/plain");
+                    const sourceContainerId = document.getElementById(taskId).parentElement.id;
+                    const targetContainerId = container.id;
+
+                    if (sourceContainerId !== targetContainerId) {
+                        moveTaskToContainer(taskId, targetContainerId);
+                    }
+                });
+
+                taskContainer.addEventListener("click", (e) => {
+                    const taskId = e.target.id;
+                    openTaskDetailsModal(taskId);
+                });
+            });
+        }
+
+        function addNewTaskToContainer(containerId, taskTitle) {
+            const container = document.getElementById(containerId);
+            const taskContainer = container.querySelector(".task-container");
+
+            const taskCard = document.createElement("div");
+            taskCard.classList.add("task");
+            taskCard.textContent = taskTitle;
+            taskCard.draggable = true;
+            taskCard.id = "task-" + Date.now();
+
+            taskContainer.appendChild(taskCard);
+            updateTaskCount(containerId);
+            saveData();
+        }
+
+        function moveTaskToContainer(taskId, targetContainerId) {
+            const targetContainer = document.getElementById(targetContainerId);
+            const taskContainer = targetContainer.querySelector(".task-container");
+            const taskCard = document.getElementById(taskId);
+
+            taskContainer.appendChild(taskCard);
+            updateTaskCount(taskCard.parentElement.id);
+            updateTaskCount(targetContainerId);
+            saveData();
+        }
+
+        function updateTaskCount(containerId) {
+            const container = document.getElementById(containerId);
+            const taskCountElement = container.querySelector('.task-count');
+            const taskCards = container.querySelectorAll('.task');
+            taskCountElement.innerHTML = taskCards.length;
+        }
+
+        function allowDropTask(e) {
+            e.preventDefault();
+        }
+
+        function dropTask(e) {
+            e.preventDefault();
+            const taskId = e.dataTransfer.getData("text/plain");
+            const targetContainerId = e.target.closest('.container').id;
+            moveTaskToContainer(taskId, targetContainerId);
+            updateTaskCount(taskId);
+            saveData();
+        }
+
+        function addNewTask(containerId) {
+            const taskTitle = prompt("Enter task title:");
+            if (taskTitle) {
+                addNewTaskToContainer(containerId, taskTitle);
+            }
+        }
+
+        function openTaskDetailsModal(taskId) {
+            const modal = document.getElementById("myModal");
+            const closeButton = document.getElementsByClassName("close-button")[0];
+            const editedTaskTitleInput = document.getElementById("editedTaskTitle");
+
+            modal.style.display = "block";
+            editedTaskTitleInput.value = document.getElementById(taskId).textContent;
+
+            closeButton.setAttribute("data-task-id", taskId);
+
+            closeButton.onclick = function () {
+                modal.style.display = "none";
+            }
+
+            window.onclick = function (event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        }
+
+        function saveEditedTaskTitle() {
+            const modal = document.getElementById("myModal");
+            const editedTaskTitleInput = document.getElementById("editedTaskTitle");
+            const taskId = document.getElementsByClassName("close-button")[0].getAttribute("data-task-id");
+
+            if (taskId) {
+                const taskCard = document.getElementById(taskId);
+                taskCard.textContent = editedTaskTitleInput.value;
+                modal.style.display = "none";
+                saveData();
+            }
+        }
+
+        function deleteAllTasks(containerId) {
+            const container = document.getElementById(containerId);
+            const taskContainer = container.querySelector(".task-container");
+            taskContainer.innerHTML = ""; // Clear all tasks
+            updateTaskCount(containerId);
+            saveData();
+        }
+
+        function resetTaskBoard() {
+            const containers = document.querySelectorAll('.container');
+
+            containers.forEach(container => {
+                const taskContainer = container.querySelector('.task-container');
+                taskContainer.innerHTML = ""; // Clear all tasks
+                updateTaskCount(container.id);
+            });
+
+            localStorage.removeItem('taskData');
+        }
+
+        function saveData() {
+            const containers = document.querySelectorAll('.container');
+            const data = {};
+
+            containers.forEach(container => {
+                const containerId = container.id;
+                const taskContainer = container.querySelector('.task-container');
+                const taskTitles = Array.from(taskContainer.querySelectorAll('.task')).map(task => task.textContent);
+                data[containerId] = taskTitles;
+            });
+
+            localStorage.setItem('taskData', JSON.stringify(data));
+        }
+
+        function show() {
+            const data = JSON.parse(localStorage.getItem('taskData'));
+            const containers = document.querySelectorAll('.container');
+
+            containers.forEach(container => {
+                const containerId = container.id;
+                const taskContainer = container.querySelector('.task-container');
+                const taskTitles = data[containerId];
+
+                if (taskTitles) {
+                    taskContainer.innerHTML = taskTitles.map(title => <div class="task" draggable="true">${title}</div>).join('');
+                    updateTaskCount(containerId);
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
